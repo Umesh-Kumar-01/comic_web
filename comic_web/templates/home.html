@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% load static %}
+
+    <div class="row justify-content-center align-items-center" style="height: 50vh;">
+        <div class="instructions">
+            <p>1. Click on the panels below to fetch images or write text.</p>
+            <p>2. Generate a link to share and save your comic. Don't refresh the site.</p>
+        </div>
+        <div class="d-flex justify-content-center align-items-center" style="height: 5vh;">
+          <div class="d-inline-block">
+              <button onclick="saveAndShare()" class="btn btn-primary">Save and Share</button>
+          </div>
+        </div>
+        <article class="comic">
+            {% for _ in ''|ljust:10 %}
+                <div class="panel" data-bs-toggle="modal" data-bs-target="#myModal{{ forloop.counter }}">
+                  <p style="height:20px"></p>
+                  <div class="loader" id="loaderPanel{{forloop.counter}}" style="display:none;"></div>
+                    {% if forloop.counter == 10 %}
+                        <p class="text bottom-right">THE END</p>
+                    {% else %}
+                        <p class="text top-left">Panel {{ forloop.counter }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </article>
+    </div>
+
+
+    {% for _ in ''|ljust:10 %}
+        <div class="modal fade" id="myModal{{ forloop.counter }}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Edit Panel Text</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="modal-body">
+                        <label for="panelText{{ forloop.counter }}" class="form-label">Panel {{ forloop.counter }} Text:</label>
+                        <textarea id="panelText{{ forloop.counter }}" class="form-control"></textarea>
+                      
+                      <div id="textOptions{{ forloop.counter }}">
+                          <label class="form-label">Text Update Options:</label>
+                      
+                          <div class="form-check">
+                              <input type="radio" class="form-check-input" name="textUpdateOption{{ forloop.counter }}" id="updatePreviousText{{ forloop.counter }}" value="updatePreviousText">
+                              <label class="form-check-label" for="updatePreviousText{{ forloop.counter }}">Update Previous Text</label>
+                          </div>
+                      
+                          <div class="form-check">
+                              <input type="radio" class="form-check-input" name="textUpdateOption{{ forloop.counter }}" id="noUpdate{{ forloop.counter }}" value="noUpdate" checked>
+                              <label class="form-check-label" for="noUpdate{{ forloop.counter }}">No Update</label>
+                          </div>
+                      
+                          <div class="form-check">
+                              <input type="radio" class="form-check-input" name="textUpdateOption{{ forloop.counter }}" id="removeText{{ forloop.counter }}" value="removeText">
+                              <label class="form-check-label" for="removeText{{ forloop.counter }}">Remove Text</label>
+                          </div>
+                      
+                          <!-- Additional options based on the selected radio button -->
+                          <div id="updateTextOptions{{ forloop.counter }}">
+                              <label for="updatedText{{ forloop.counter }}" class="form-label">Updated Text:</label>
+                              <input type="text" id="updatedText{{ forloop.counter }}" class="form-control">
+                      
+                              <label for="textPosition{{ forloop.counter }}" class="form-label">Text Position:</label>
+                              <select id="textPosition{{ forloop.counter }}" class="form-select">
+                                  <option value="top-left">top-left</option>
+                                  <option value="bottom-right">bottom-right</option>
+                              </select>
+                          </div>
+                      </div>
+                      
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="submitPanelText(document.getElementById('panelText{{ forloop.counter }}').value, {{ forloop.counter }})">Get Image</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+        
+
+    <script>
+        function handleResize() {
+            const panels = document.querySelectorAll('.panel');
+
+            panels.forEach(panel => {
+                const height = panel.clientHeight;
+                const width = panel.clientWidth;
+                panel.style.backgroundSize = `${width}px ${height}px`;
+            });
+        }
+
+        window.addEventListener('resize', handleResize);
+
+        function submitPanelText(panelText, panelNumber) {
+          const panel = document.querySelector(`.panel[data-bs-target="#myModal${panelNumber}"]`);
+          const spinner = document.getElementById(`loaderPanel${panelNumber}`);
+          const textOptions = document.getElementById(`textOptions${panelNumber}`);
+          const updateTextOption = document.querySelector(`input[name="textUpdateOption${panelNumber}"]:checked`).value;
+          const updatedText = document.getElementById(`updatedText${panelNumber}`).value;
+          const textPosition = document.getElementById(`textPosition${panelNumber}`).value;
+      
+          
+          
+          const textElement = panel.querySelector('.text');
+          const checker_classes = ["top-left", "bottom-right"];
+
+          if (updateTextOption === 'updatePreviousText') {
+              textElement.innerText = updatedText;
+              textElement.style.display = 'block';
+
+              checker_classes.forEach(className => {
+                  if (textElement.classList.contains(className)) {
+                      textElement.classList.remove(className);
+                  }
+              });
+
+              textElement.classList.add(textPosition);
+          } else if (updateTextOption === 'removeText') {
+              textElement.innerText = '';
+
+              checker_classes.forEach(className => {
+                  if (textElement.classList.contains(className)) {
+                      textElement.classList.remove(className);
+                  }
+              });
+
+              textElement.style.display = 'none';
+          }
+
+          
+          if (!panelText.trim()) {
+            alert('Please enter text before submitting.');
+            return;
+          }
+
+          spinner.style.display = 'block';
+
+          fetch(`/api/generate-image/?text=${panelText}`)
+          .then(response => response.json())
+          .then(data => {
+                  const imageUrl = `data:image/png;base64,${data.image}`;
+                  setPanelBackground(panel, imageUrl);
+      
+                  spinner.style.display = 'none';
+              })
+              .catch(error => {
+                  console.error('Error:', error);
+                  spinner.style.display = 'none';
+                  alert('Internal Server Error! See Console For More Details.');
+              });
+      }
+      
+        function setPanelBackground(panel, imageUrl) {
+            panel.style.backgroundImage = `url(${imageUrl})`;
+            const height = panel.clientHeight;
+            const width = panel.clientWidth;
+            panel.style.backgroundSize = `${width}px ${height}px`;
+        }
+      
+        function saveAndShare() {
+          const panels = document.querySelectorAll('.panel');
+          const data = [];
+          
+          panels.forEach((panel, index) => {
+              const textElement = panel.querySelector('.text');
+              const imageElement = panel.style.backgroundImage;
+      
+              const panelData = {
+                  image_url: imageElement ? imageElement.slice(5, -2) : '',
+                  text_content: textElement.outerHTML,
+              };
+              data.push(panelData);
+          });
+          
+          const allImageUrlsEmpty = data.every(panelData => panelData.image_url === '');
+
+          if (allImageUrlsEmpty) {
+              alert('Please add images to at least one panel before saving.');
+              return;
+          }
+
+          const csrfToken = document.cookie.split('; ')
+              .find(row => row.startsWith('csrftoken='))
+              .split('=')[1];
+      
+          fetch('/save_and_share/', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': csrfToken,
+              },
+              body: JSON.stringify({
+                  data: data,
+                  checker_url: window.location.href,
+              }),
+          })
+          .then(response => response.json())
+          .then(data => {
+              console.log('Response from server:', data);
+      
+              if (data.success) {
+                  document.body.innerHTML = '';
+      
+                
+                  const container = document.createElement('div');
+                  container.className = 'container mt-5';
+      
+                  const warning = document.createElement('p');
+                  warning.className = 'alert alert-warning';
+                  warning.textContent = 'Warning: Save the following links. You can only open your created comics using these links.';
+                  container.appendChild(warning);
+      
+                  const readLink = document.createElement('p');
+                  readLink.className = 'alert alert-success';
+                  readLink.textContent = `Read Only Link -> ${window.location.host}/comic/read/${data.read_url}`;
+                  container.appendChild(readLink);
+
+                  const writeLink = document.createElement('p');
+                  writeLink.className = 'alert alert-info';
+                  writeLink.textContent = `Want to Edit the comic Again -> ${window.location.host}/comic/edit/${data.write_url}`;
+                  container.appendChild(writeLink);      
+                  document.body.appendChild(container);
+              } else {
+                  alert('Failed to save data. Please try again.');
+              }
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              alert('An error occurred. Please check the console for details.');
+          });
+      }
+    </script>
+
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% load static %}
+
+    <div class="row justify-content-center align-items-center" style="height: 50vh;">
+        <div class="instructions">
+            <p>If not able to see the images clearly just resize your window Onces.</p>
+        </div>
+        <article class="comic">
+            {% for panel in comic.panels.all %}
+                <div class="panel" data-bs-toggle="modal"
+                {% if panel.image_element.image_url %}
+                style="background-image: url({{panel.image_element.image_url}});"
+                onload = "handleResize()"
+                {% endif %} data-bs-target="#myModal{{ forloop.counter }}">
+                    <p style="height:20px"></p>
+                    <div class="loader" id="loaderPanel{{forloop.counter}}" style="display:none;"></div>
+                    {{ panel.text_element.content|safe }}
+                </div>
+            {% endfor %}
+
+        </article>
+    </div>
+
+    <script>
+        function handleResize() {
+            const panels = document.querySelectorAll('.panel');
+
+            panels.forEach(panel => {
+                const height = panel.clientHeight;
+                const width = panel.clientWidth;
+                panel.style.backgroundSize = `${width}px ${height}px`;
+            });
+        }
+
+        window.addEventListener('resize', handleResize);
+
+        function setPanelBackground(panel, imageUrl) {
+            panel.style.backgroundImage = `url(${imageUrl})`;
+            const height = panel.clientHeight;
+            const width = panel.clientWidth;
+            panel.style.backgroundSize = `${width}px ${height}px`;
+        }
+
+    </script>
+
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+{% endblock %}
