@@ -70,5 +70,8 @@ The application will be available at http://127.0.0.1:8000/.
 3. Submit the form to generate the comic strip with images.
 4. Share the unique link with others.
 
+## Deployed Link
+- https://20.40.49.216/comic/
+
 Note: This application has been developed as part of the Dashtoon hiring process assignment.
 
